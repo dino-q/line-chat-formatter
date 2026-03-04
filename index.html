@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LINE 對話整理器</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E8E4DC;
+    --card: #FFFFFF;
+    --text: #2D2A26;
+    --muted: #7A756D;
+    --subtle: #A8A29E;
+    --border: #D6D0C8;
+    --light: #F5F2ED;
+    --green: #06C755;
+    --green-dark: #04A648;
+    --green-light: #E6F9ED;
+    --yellow-hi: #FFF9C4;
+    --yellow-border: #FFE082;
+    --shadow: rgba(45, 42, 38, 0.08);
+    --shadow-md: rgba(45, 42, 38, 0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+
+  .header {
+    background: var(--green);
+    padding: 20px 0 18px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(6, 199, 85, 0.25);
+  }
+  .header h1 {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .header h1 .icon {
+    width: 28px; height: 28px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header .subtitle {
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  .panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 4px var(--shadow), 0 4px 16px var(--shadow);
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+  }
+  .panel:hover { box-shadow: 0 2px 8px var(--shadow-md), 0 8px 24px var(--shadow-md); }
+
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--light);
+  }
+  .panel-header .label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-header .label .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+  }
+
+  .panel-body { padding: 0; }
+
+  #input {
+    width: 100%;
+    min-height: 200px;
+    max-height: 50vh;
+    border: none;
+    outline: none;
+    padding: 16px 20px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+    background: transparent;
+    resize: vertical;
+  }
+  #input::placeholder { color: var(--subtle); }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--light);
+  }
+  .btn {
+    border: none;
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--green);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(6,199,85,0.3);
+  }
+  .btn-primary:hover {
+    background: var(--green-dark);
+    box-shadow: 0 4px 14px rgba(6,199,85,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--border);
+    color: var(--muted);
+  }
+  .btn-secondary:hover { background: #C9C3BB; color: var(--text); }
+  .btn-copy {
+    background: transparent;
+    color: var(--green-dark);
+    border: 1.5px solid var(--green);
+  }
+  .btn-copy:hover { background: var(--green-light); }
+  .btn-copy.copied {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+  .btn-upload {
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px dashed var(--border);
+  }
+  .btn-upload:hover { border-color: var(--green); color: var(--green-dark); }
+  .btn-download {
+    background: transparent;
+    color: var(--green-dark);
+    border: 1.5px solid var(--green);
+  }
+  .btn-download:hover { background: var(--green-light); }
+
+  /* Stats bar */
+  .stats {
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--subtle);
+    background: var(--light);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Show more button */
+  .load-more-wrap {
+    padding: 16px 20px;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .btn-load-more {
+    background: var(--light);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    padding: 10px 32px;
+    border-radius: var(--radius-sm);
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-load-more:hover { border-color: var(--green); color: var(--green-dark); background: var(--green-light); }
+
+  #output {
+    padding: 20px;
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  #output:empty::before {
+    content: '整理後的對話會顯示在這裡 ✨';
+    color: var(--subtle);
+    font-style: italic;
+  }
+
+  .speaker-header {
+    background: var(--yellow-hi);
+    border-left: 3px solid var(--yellow-border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .date-separator {
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%);
+    border: 1px solid #FFCC80;
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin: 20px 0 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #E65100;
+    letter-spacing: 1.5px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .date-separator::before,
+  .date-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #FFCC80;
+  }
+  .date-separator:first-child { margin-top: 0; }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .info {
+    text-align: center;
+    font-size: 11px;
+    color: var(--subtle);
+    padding: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Debug panel */
+  #debug-panel { display: none; }
+  #debug-panel.show { display: block; }
+  #debug-info {
+    padding: 12px 20px;
+    font-size: 12px;
+    color: var(--muted);
+    background: #fafafa;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 16px 10px 40px; }
+    #input { font-size: 13px; padding: 14px 16px; }
+    #output { font-size: 13px; padding: 16px; }
+    .actions { flex-wrap: wrap; }
+    .btn { flex: 1; justify-content: center; min-width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="icon">💬</span>LINE 對話整理器</h1>
+  <div class="subtitle">貼上對話 → 一鍵整理 · 完全離線 · 不消耗 Token</div>
+</div>
+
+<div class="container">
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="label"><span class="dot"></span>貼上 LINE 對話</span>
+      <span style="font-size:11px;color:var(--subtle);">支援多行、續行、表情符號</span>
+    </div>
+    <div class="panel-body">
+      <textarea id="input" placeholder="在這裡貼上 LINE 對話純文字...&#10;&#10;例如：&#10;2026.03.03 星期二&#10;10:15 小美-企劃部 下午的會議改到3點喔&#10;10:16 小美-企劃部 記得帶筆電～&#10;10:18 阿凱-設計部 收到！簡報我已經更新好了&#10;&#10;2026.03.04 星期三&#10;09:00 小美-企劃部 早安～昨天的會議紀錄我寄了"></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="formatChat()">✨ 整理對話</button>
+      <button class="btn btn-secondary" onclick="clearAll()">清除</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-upload" onclick="document.getElementById('fileInput').click()">📂 上傳 .txt</button>
+      <input type="file" id="fileInput" accept=".txt,.text" style="display:none" onchange="handleUpload(event)">
+    </div>
+  </div>
+
+  <div class="panel" id="output-panel" style="display:none;">
+    <div class="panel-header">
+      <span class="label"><span class="dot"></span>整理結果 <span id="stats-badge" style="font-weight:400;color:var(--subtle);margin-left:4px;"></span></span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-download" onclick="downloadOutput()">⬇ 下載 .txt</button>
+        <button class="btn btn-copy" id="copyBtn" onclick="copyOutput()">📋 複製純文字</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div id="output"></div>
+    </div>
+    <div class="load-more-wrap" id="load-more-wrap" style="display:none;">
+      <button class="btn-load-more" id="loadMoreBtn" onclick="loadMore()">顯示更多 ▼</button>
+    </div>
+    <!-- Debug: click header label 3 times to toggle -->
+    <div id="debug-panel">
+      <div id="debug-info"></div>
+    </div>
+  </div>
+
+  <div class="info">離線工具 · 資料不會上傳 · 直接在瀏覽器中處理</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Aggressive Unicode Normalization ──
+
+function norm(str) {
+  return str
+    .normalize('NFC')                                    // Unicode NFC normalization
+    .replace(/[\u200B\u200C\u200D\uFEFF\u2060\u00AD]/g, '') // Remove zero-width chars
+    .replace(/[\s\u3000\u00A0\t\u2003\u2002\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u202F\u205F]/g, ' ') // ALL whitespace → space
+    .replace(/ +/g, ' ')                                  // Collapse multiple spaces
+    .trim();
+}
+
+// For COMPARISON: also normalize full-width ASCII to half-width
+function normCmp(str) {
+  return norm(str)
+    .replace(/[\uFF01-\uFF5E]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+}
+
+// ── Frequency-based Sender Detection ──
+// Strategy: scan ALL lines → count how often each possible "prefix" appears
+// → the longest prefix that appears consistently = the sender name
+
+function detectSenders(rawLines) {
+  // Step 1: extract all time-prefixed lines
+  const entries = [];
+  for (const line of rawLines) {
+    const n = norm(line);
+    const m = n.match(/^(\d{1,2}:\d{2}) (.+)$/);
+    if (m) entries.push({ rest: m[2], cmp: normCmp(m[2]) });
+  }
+  if (entries.length === 0) return [];
+
+  // Step 2: count ALL possible prefix candidates (using normCmp for comparison)
+  // For each line like "安居-楊子泓 Patrick(Pike) 我看凱庭上設計..."
+  // candidates are: "安居-楊子泓", "安居-楊子泓 Patrick(Pike)", "安居-楊子泓 Patrick(Pike) 我看凱庭上設計..." etc.
+  const prefixCounts = {};
+  for (const e of entries) {
+    const words = e.cmp.split(' ');
+    for (let k = 1; k <= words.length; k++) {
+      const prefix = words.slice(0, k).join(' ');
+      prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+    }
+  }
+
+  // Step 3: count first-word frequency (= total messages per sender group)
+  const fwCounts = {};
+  for (const e of entries) {
+    const fw = e.cmp.split(' ')[0];
+    fwCounts[fw] = (fwCounts[fw] || 0) + 1;
+  }
+
+  // Step 4: for each entry, find the LONGEST prefix whose count == first-word count
+  // Logic: real sender name appears in ALL messages from that sender,
+  // so its count must equal the first-word count.
+  // For senders with only 1 message, default to first word.
+  const senderMap = {}; // normCmp prefix → original sender name
+  const debugInfo = [];
+
+  for (const e of entries) {
+    const cmpWords = e.cmp.split(' ');
+    const origWords = e.rest.split(' ');
+    const fw = cmpWords[0];
+    const expectedCount = fwCounts[fw];
+
+    let bestK = 1; // default: first word only
+
+    if (expectedCount >= 2) {
+      // Try from longest to shortest (but must leave at least 1 word for content)
+      for (let k = cmpWords.length - 1; k >= 2; k--) {
+        const prefix = cmpWords.slice(0, k).join(' ');
+        if (prefixCounts[prefix] === expectedCount) {
+          bestK = k;
+          break;
+        }
+      }
+    }
+
+    const senderCmp = cmpWords.slice(0, bestK).join(' ');
+    const senderOrig = origWords.slice(0, bestK).join(' ');
+
+    if (!senderMap[senderCmp]) {
+      senderMap[senderCmp] = senderOrig;
+      debugInfo.push(`"${senderOrig}" (freq=${expectedCount}, words=${bestK})`);
+    }
+  }
+
+  window._senderDebug = debugInfo;
+
+  // Return unique senders, longest first (for greedy matching)
+  return [...new Set(Object.values(senderMap))].sort((a, b) => b.length - a.length);
+}
+
+// ── Date Line Detection ──
+// Matches: 2026.03.03 星期二, 2026/03/03 星期二, 2026-03-03 星期二, etc.
+const DATE_RE = /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}\s*[（(]?星期[一二三四五六日天][）)]?$/;
+
+function isDateLine(normalized) {
+  return DATE_RE.test(normalized);
+}
+
+// ── Message Parsing ──
+
+function parseMessages(raw) {
+  const rawLines = raw.split('\n');
+  const senders = detectSenders(rawLines);
+  const messages = [];
+
+  // Pre-normalize senders for comparison
+  const senderCmps = senders.map(s => ({ orig: s, cmp: normCmp(s) }));
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const n = norm(rawLines[i]);
+
+    // Check for date separator line FIRST
+    if (isDateLine(n)) {
+      messages.push({ type: 'date', dateText: n });
+      continue;
+    }
+
+    const timeMatch = n.match(/^(\d{1,2}:\d{2}) (.+)$/);
+
+    if (timeMatch) {
+      const time = timeMatch[1];
+      const rest = timeMatch[2];
+      const restCmp = normCmp(rest);
+
+      // Try to match known sender (longest first)
+      let matched = false;
+      for (const sc of senderCmps) {
+        // Compare using normCmp versions
+        if (restCmp.startsWith(sc.cmp + ' ')) {
+          // Extract content from the NORM version (not normCmp)
+          // Find where sender ends in norm version
+          const senderWordCount = sc.orig.split(' ').length;
+          const restWords = rest.split(' ');
+          const content = restWords.slice(senderWordCount).join(' ').trim();
+          messages.push({ type: 'msg', time, sender: sc.orig, lines: content ? [content] : [] });
+          matched = true;
+          break;
+        }
+        if (restCmp === sc.cmp) {
+          messages.push({ type: 'msg', time, sender: sc.orig, lines: [] });
+          matched = true;
+          break;
+        }
+      }
+
+      if (!matched) {
+        const spaceIdx = rest.indexOf(' ');
+        if (spaceIdx > 0) {
+          messages.push({ type: 'msg', time, sender: rest.substring(0, spaceIdx), lines: [rest.substring(spaceIdx + 1).trim()] });
+        } else {
+          messages.push({ type: 'msg', time, sender: rest, lines: [] });
+        }
+      }
+    } else {
+      // Continuation line
+      if (messages.length > 0 && messages[messages.length - 1].type === 'msg') {
+        messages[messages.length - 1].lines.push(rawLines[i]);
+      }
+    }
+  }
+
+  return messages;
+}
+
+// ── Grouping ──
+
+function groupMessages(messages) {
+  if (messages.length === 0) return [];
+
+  const groups = [];
+  let cur = null;
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
+    if (msg.type === 'date') {
+      // Flush current group
+      if (cur) { groups.push(cur); cur = null; }
+      // Insert date separator
+      groups.push({ type: 'date', dateText: msg.dateText });
+      continue;
+    }
+
+    // Normal message
+    if (cur && msg.sender === cur.sender) {
+      cur.allLines.push(...msg.lines);
+    } else {
+      if (cur) groups.push(cur);
+      cur = { type: 'msg', time: msg.time, sender: msg.sender, allLines: [...msg.lines] };
+    }
+  }
+  if (cur) groups.push(cur);
+  return groups;
+}
+
+// ── Format & Display (with pagination) ──
+
+const PAGE_SIZE = 15; // groups per page
+let allGroups = [];
+let shownCount = 0;
+
+function renderGroups(groups, outputEl, startIdx) {
+  groups.forEach((group, i) => {
+    const idx = startIdx + i;
+
+    if (group.type === 'date') {
+      const dateEl = document.createElement('div');
+      dateEl.className = 'date-separator';
+      dateEl.textContent = group.dateText;
+      outputEl.appendChild(dateEl);
+      return;
+    }
+
+    if (idx > 0) outputEl.appendChild(document.createElement('br'));
+
+    const headerEl = document.createElement('div');
+    const headerSpan = document.createElement('span');
+    headerSpan.className = 'speaker-header';
+    headerSpan.textContent = group.time + ' ' + group.sender;
+    headerEl.appendChild(headerSpan);
+    outputEl.appendChild(headerEl);
+
+    let lines = [...group.allLines];
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+    lines.forEach(line => {
+      const lineEl = document.createElement('div');
+      lineEl.textContent = line;
+      outputEl.appendChild(lineEl);
+    });
+  });
+}
+
+function buildPlainText(groups) {
+  const parts = [];
+  groups.forEach((group, idx) => {
+    if (group.type === 'date') {
+      if (idx > 0) parts.push('');
+      parts.push('━━━━━━━━━━ ' + group.dateText + ' ━━━━━━━━━━');
+      return;
+    }
+    if (idx > 0) parts.push('');
+    parts.push(group.time + ' ' + group.sender);
+    let lines = [...group.allLines];
+    while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
+    lines.forEach(line => parts.push(line));
+  });
+  return parts.join('\n');
+}
+
+function formatChat() {
+  const raw = document.getElementById('input').value.trim();
+  if (!raw) { showToast('請先貼上 LINE 對話內容'); return; }
+
+  const messages = parseMessages(raw);
+  if (messages.length === 0) {
+    showToast('未偵測到對話格式，請確認格式為「HH:MM 發話者 內容」');
+    return;
+  }
+
+  allGroups = groupMessages(messages);
+  shownCount = 0;
+
+  const outputEl = document.getElementById('output');
+  const outputPanel = document.getElementById('output-panel');
+  outputEl.innerHTML = '';
+
+  // Render first page
+  const firstPage = allGroups.slice(0, PAGE_SIZE);
+  renderGroups(firstPage, outputEl, 0);
+  shownCount = firstPage.length;
+
+  // Store full plain text for copy/download
+  outputEl.dataset.plainText = buildPlainText(allGroups);
+
+  // Stats badge
+  const msgGroups = allGroups.filter(g => g.type === 'msg');
+  const dateGroups = allGroups.filter(g => g.type === 'date');
+  const uniqueSenders = [...new Set(msgGroups.map(g => g.sender))];
+  let statsText = `（${msgGroups.length} 段對話・${uniqueSenders.length} 位發話者`;
+  if (dateGroups.length > 0) statsText += `・跨 ${dateGroups.length + (dateGroups[0] === allGroups[0] ? 0 : 1)} 天`;
+  statsText += '）';
+  document.getElementById('stats-badge').textContent = statsText;
+
+  // Show/hide "load more"
+  updateLoadMore();
+
+  outputPanel.style.display = 'block';
+
+  // Update debug panel
+  document.getElementById('debug-info').textContent =
+    'Detected senders:\n' + (window._senderDebug || []).join('\n');
+
+  outputPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showToast('整理完成 ✅');
+}
+
+function loadMore() {
+  const outputEl = document.getElementById('output');
+  const nextPage = allGroups.slice(shownCount, shownCount + PAGE_SIZE);
+  renderGroups(nextPage, outputEl, shownCount);
+  shownCount += nextPage.length;
+  updateLoadMore();
+}
+
+function updateLoadMore() {
+  const wrap = document.getElementById('load-more-wrap');
+  const remaining = allGroups.length - shownCount;
+  if (remaining > 0) {
+    wrap.style.display = 'block';
+    document.getElementById('loadMoreBtn').textContent =
+      `顯示更多（剩餘 ${remaining} 段）▼`;
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+// ── File Upload ──
+
+function handleUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('input').value = e.target.result;
+    showToast('已載入 ' + file.name);
+  };
+  reader.readAsText(file, 'UTF-8');
+  event.target.value = ''; // reset for re-upload
+}
+
+// ── Download ──
+
+function downloadOutput() {
+  const text = document.getElementById('output').dataset.plainText;
+  if (!text) { showToast('沒有可下載的內容'); return; }
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'LINE對話整理_' + new Date().toISOString().slice(0,10) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('已下載 ✅');
+}
+
+// ── Copy ──
+
+function copyOutput() {
+  const outputEl = document.getElementById('output');
+  const text = outputEl.dataset.plainText || outputEl.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✅ 已複製';
+    btn.classList.add('copied');
+    showToast('已複製到剪貼簿');
+    setTimeout(() => { btn.textContent = '📋 複製純文字'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已複製到剪貼簿');
+  });
+}
+
+function clearAll() {
+  document.getElementById('input').value = '';
+  document.getElementById('output').innerHTML = '';
+  document.getElementById('output-panel').style.display = 'none';
+  document.getElementById('debug-panel').classList.remove('show');
+  document.getElementById('load-more-wrap').style.display = 'none';
+  allGroups = [];
+  shownCount = 0;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ── Keyboard shortcut ──
+document.getElementById('input').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') formatChat();
+});
+
+// ── Debug toggle: click "整理結果" label 3 times ──
+let debugClicks = 0;
+document.querySelector('#output-panel .label')?.addEventListener('click', () => {
+  debugClicks++;
+  if (debugClicks >= 3) {
+    document.getElementById('debug-panel').classList.toggle('show');
+    debugClicks = 0;
+  }
+  setTimeout(() => { debugClicks = 0; }, 1000);
+});
+</script>
+
+</body>
+</html>
